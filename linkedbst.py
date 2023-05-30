@@ -3,6 +3,7 @@ File: linkedbst.py
 Author: Ken Lambert
 """
 import random
+import time
 from math import log
 from abstractcollection import AbstractCollection
 from bstnode import BSTNode
@@ -80,17 +81,16 @@ class LinkedBST(AbstractCollection):
         """If item matches an item in self, returns the
         matched item, or None otherwise."""
 
-        def recurse(node):
-            if node is None:
-                return None
-            elif item == node.data:
-                return node.data
-            elif item < node.data:
-                return recurse(node.left)
-            else:
-                return recurse(node.right)
+        current_node = self._root
 
-        return recurse(self._root)
+        while current_node is not None:
+            if item == current_node.data:
+                return current_node.data
+            elif item < current_node.data:
+                current_node = current_node.left
+            else:
+                current_node = current_node.right
+        return None
 
     # Mutator methods
     def clear(self):
@@ -101,28 +101,30 @@ class LinkedBST(AbstractCollection):
     def add(self, item):
         """Adds item to the tree."""
 
-        # Helper function to search for item's position
-        def recurse(node):
-            # New item is less, go left until spot is found
-            if item < node.data:
-                if node.left is None:
-                    node.left = BSTNode(item)
-                else:
-                    recurse(node.left)
-            # New item is greater or equal,
-            # go right until spot is found
-            elif node.right is None:
-                node.right = BSTNode(item)
-            else:
-                recurse(node.right)
-                # End of recurse
-
-        # Tree is empty, so new item goes at the root
         if self.isEmpty():
             self._root = BSTNode(item)
-        # Otherwise, search for the item's spot
+            self._size += 1
+            return
+
+        current_node = self._root
+        parent = None
+        direction = None
+
+        while current_node is not None:
+            parent = current_node
+            if item < current_node.data:
+                current_node = current_node.left
+                direction = 'L'
+            else:
+                current_node = current_node.right
+                direction = 'R'
+
+        new_node = BSTNode(item)
+        if direction == 'L':
+            parent.left = new_node
         else:
-            recurse(self._root)
+            parent.right = new_node
+
         self._size += 1
 
     def remove(self, item):
@@ -278,12 +280,13 @@ class LinkedBST(AbstractCollection):
         append_vert(self._root, low, high)
         return [elem.data for elem in res]
 
-    def rebalance(self):
+    def rebalance(self, inorder = None):
         '''
         Rebalances the tree.
         :return:
         '''
-        inorder = list(self.inorder())
+        if inorder is None:
+            inorder = list(self.inorder())
         self.clear()
         def divide_tree(lst):
             if lst:
@@ -352,16 +355,44 @@ class LinkedBST(AbstractCollection):
             ind = random.randint(0, words_num-1)
             words_to_find.append(words[ind])
 
+        print(f'Test start\nSearch time(in seconds) for 10000 random words in list/\
+tree with {words_num} elements\n')
+        start = time.time()
         for word in words_to_find:
             if word in words:
-                pass
+                continue
+        end = time.time()
+        print('List:', round(end-start, 2))
 
-tree = LinkedBST()
-tree.add(7)
-tree.add(4)
-tree.add(2)
-tree.add(3)
-tree.add(9)
-tree.add(0)
-tree.add(11)
-tree.demo_bst('words.txt')
+        sorted_tree = LinkedBST(words)
+        rebalanced_tree = LinkedBST()
+        rebalanced_tree.rebalance(words)
+        unsorted_tree = LinkedBST()
+        while words:
+            ind = random.randint(0, len(words)-1)
+            unsorted_tree.add(words[ind])
+            words.pop(ind)
+
+        start = time.time()
+        for word in words_to_find:
+            sorted_tree.find(word)
+        end = time.time()
+        print('Sorted binary search tree:', round(end-start, 2))
+
+        start = time.time()
+        for word in words_to_find:
+            unsorted_tree.find(word)
+        end = time.time()
+        print('Unsorted binary search tree:', round(end-start, 2))
+
+        start = time.time()
+        for word in words_to_find:
+            rebalanced_tree.find(word)
+        end = time.time()
+        print('Rebalanced binary search tree:',round(end-start, 2))
+        print('\nTest end')
+
+
+if __name__ == '__main__':
+    tree = LinkedBST()
+    tree.demo_bst('words50k.txt')
